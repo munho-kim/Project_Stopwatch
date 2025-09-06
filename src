@@ -1,1 +1,208 @@
+`timescale 1ns / 1ps
+
+module system_top (
+    input        clk,
+    input        rst,
+    input  [4:0] sw,
+    input        btn_r,
+    input        btn_l,
+    input        btn_u,
+    input        btn_d,
+    input        rx,
+    input        echo,
+    output       tx,
+    output       trig,
+    inout        btn_io,
+    output [3:0] led,
+    output [7:0] fnd_data,
+    output [3:0] fnd_com
+);
+
+    wire [6:0] w_st_msec;
+    wire [5:0] w_st_sec;
+    wire [5:0] w_st_min;
+    wire [4:0] w_st_hour;
+
+    wire [6:0] w_clk_msec;
+    wire [5:0] w_clk_sec;
+    wire [5:0] w_clk_min;
+    wire [4:0] w_clk_hour;
+
+    wire [6:0] w_msec;
+    wire [5:0] w_sec;
+    wire [5:0] w_min;
+    wire [4:0] w_hour;
+
+    wire [1:0] w_num_position;
+    wire w_blink_tick;
+
+    wire [2:0] o_sw;
+    wire o_btn_r; 
+    wire o_btn_l;
+    wire o_btn_u;
+    wire o_btn_d;
+
+    wire w_up_uart, w_right_uart, w_left_uart, w_down_uart;
+    wire w_sw0_uart, w_sw1_uart, w_sw2_uart;
+
+    wire [8:0] w_ultra_sonic;
+    wire [7:0] w_temperature;
+    wire [7:0] w_humidity;
+
+    wire w_sr04_done, w_dht11_done;
+    wire w_sr04_start, w_dht11_start;
+
+    led_sel U_LED_SEL (
+        .sw(o_sw[1:0]),
+        .led(led)
+    );
+
+    stop_watch U_ST (
+        .clk  (clk),
+        .rst  (rst),
+        .btn_r(o_btn_r),
+        .btn_l(o_btn_l),
+
+        .msec (w_st_msec),
+        .sec  (w_st_sec),
+        .min  (w_st_min),
+        .hour (w_st_hour)
+    );
+
+    clock U_CLK (
+        .clk       (clk),
+        .rst       (rst),
+        .mode      (o_sw[2:1]),
+        .btn_r     (o_btn_r),
+        .btn_u     (o_btn_u),
+        .btn_d     (o_btn_d),
+
+        .blink_tick(w_blink_tick),
+        .num_position(w_num_position),
+        .msec      (w_clk_msec),
+        .sec       (w_clk_sec),
+        .min       (w_clk_min),
+        .hour      (w_clk_hour)    
+    );
+
+    mux_48x24 U_MUX_48x24 (
+        .mode    (o_sw[1]),
+        .st_msec (w_st_msec),
+        .st_sec  (w_st_sec),
+        .st_min  (w_st_min),
+        .st_hour (w_st_hour),
+        .clk_msec(w_clk_msec),
+        .clk_sec (w_clk_sec),
+        .clk_min (w_clk_min),
+        .clk_hour(w_clk_hour),
+
+        .o_msec  (w_msec),
+        .o_sec   (w_sec),
+        .o_min   (w_min),
+        .o_hour  (w_hour)
+    );
+
+
+
+    fnd_controller U_FND_CONTROLELR(
+        .clk(clk),
+        .rst(rst),
+        .mode(o_sw),
+        .sw3(sw[3]),
+        .sw4(sw[4]),
+        .num_position(w_num_position),
+        .blink_tick(w_blink_tick),
+        .msec(w_msec),
+        .sec(w_sec),
+        .min(w_min),
+        .hour(w_hour),
+        .ultra_sonic(w_ultra_sonic),
+        .temperature(w_temperature),
+        .humidity(w_humidity),
+        .fnd_data(fnd_data),
+        .fnd_com(fnd_com)
+    );
+
+
+
+    btn_sw_controller U_BTN_SW_CONTROLLER(
+        //input
+        .clk(clk),
+        .rst(rst),
+        .up_uart(w_up_uart),
+        .down_uart(w_down_uart),
+        .left_uart(w_left_uart),
+        .right_uart(w_right_uart),
+        .sw0_uart(w_sw0_uart),
+        .sw1_uart(w_sw1_uart),
+        .sw2_uart(w_sw2_uart),
+        .i_sw(sw[2:0]),
+        .i_btn_r(btn_r),
+        .i_btn_l(btn_l),
+        .i_btn_u(btn_u),
+        .i_btn_d(btn_d),
+        //output
+        .o_sw(o_sw),
+        .o_btn_r(o_btn_r),
+        .o_btn_l(o_btn_l),
+        .o_btn_u(o_btn_u),
+        .o_btn_d(o_btn_d)
+    );
+
+    instruction_handle U_INSTRUCTION_HANDLE(
+    //input
+    .clk(clk),
+    .rst(rst),
+    .st_msec(w_st_msec),
+    .st_sec(w_st_sec),
+    .st_min(w_st_min),
+    .st_hour(w_st_hour),
+    .clk_msec(w_clk_msec),
+    .clk_sec(w_clk_sec),
+    .clk_min(w_clk_min),
+    .clk_hour(w_clk_hour),
+    .ultra_sonic(w_ultra_sonic),
+    .temperature(w_temperature),
+    .humidity(w_humidity),
+    .rx(rx),
+    .sr04_done(w_sr04_done),
+    .dht11_done(w_dht11_done),
+    //output
+    .tx(tx), 
+    .right_uart(w_right_uart),
+    .left_uart(w_left_uart),
+    .up_uart(w_up_uart),
+    .down_uart(w_down_uart),
+    .sw0_uart(w_sw0_uart),
+    .sw1_uart(w_sw1_uart),
+    .sw2_uart(w_sw2_uart),
+    .sr04_start(w_sr04_start),
+    .dht11_start(w_dht11_start)
+    );
+
+    TOP_SR04 U_TOP_SR04(
+    .clk(clk),
+    .rst(rst),
+    .start(btn_r & sw[3]),
+    .start_uart(w_sr04_start),
+    .echo(echo),
+    .trig(trig),
+    .dist(w_ultra_sonic), // for 400cm
+    .done(w_sr04_done)
+    );
+
+    dht_11_top U_DHT_11_TOP(
+    //input
+    .clk(clk),
+    .rst(rst),
+    .start_btn(btn_l & sw[4]),
+    .start_uart(w_dht11_start),
+    //inout
+    .btn_io(btn_io),
+    //output
+    .humidity(w_humidity),
+    .temperature(w_temperature),
+    .done(w_dht11_done)
+);
+endmodule
 
